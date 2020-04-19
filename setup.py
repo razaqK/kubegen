@@ -1,14 +1,17 @@
 from setuptools import setup, find_packages
 
+with open("Readme.md", "r") as fh:
+    long_description = fh.read()
+
 setup(
     name="kubegen",
-    version="0.0.3",
+    version="1.0.0",
     author="Razaq Kasali",
     author_email="razaqkor@gmail.com",
     description="A package to generate k8s policy file",
-    # long_description=long_description,
-    # long_description_content_type="text/markdown",
-    url="https://github.com/pypa/kubegen",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    url="https://github.com/razaqK/kubegen",
     packages=find_packages(),
     classifiers=[
         "Intended Audience :: Developers",
