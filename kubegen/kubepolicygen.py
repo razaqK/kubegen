@@ -14,12 +14,12 @@ def get_properties_state(properties):
     return error_exist, error
 
 
-def set_volume(argument, config):
+def set_volume_mounts(argument, config):
     if argument and len(argument) > 0:
         config['spec']['template']['spec']['containers'][0]['volumeMounts'] = argument
 
 
-def set_volume_mounts(argument, config):
+def set_volumes(argument, config):
     if argument and len(argument) > 0:
         config['spec']['template']['spec']['volumes'] = argument
 
