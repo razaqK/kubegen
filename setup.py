@@ -5,7 +5,7 @@ with open("Readme.md", "r") as fh:
 
 setup(
     name="kubegen",
-    version="1.0.1",
+    version="1.0.2",
     author="Razaq Kloc",
     author_email="razaqkor@gmail.com",
     description="A package to generate k8s policy file",
