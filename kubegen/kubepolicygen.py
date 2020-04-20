@@ -57,7 +57,7 @@ def set_policy_attributes(key, argument, config):
         'service_environment': set_service_environment,
         'environment_variables': set_environment_variables,
         'image_pull_secret': set_image_pull_secret,
-        'volumes': set_volume,
+        'volumes': set_volumes,
         'volume_mounts': set_volume_mounts,
         'annotations': set_annotations,
     }
