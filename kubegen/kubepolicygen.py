@@ -46,9 +46,61 @@ def set_service_environment(argument, config):
         config['spec']['selector']['environment'] = argument
 
 
+def set_namespace(argument, config):
+    if argument and argument.strip():
+        config['metadata']['namespace'] = argument
+
+
+def set_labels(argument, config):
+    if bool(argument):
+        config['metadata']['labels'] = argument
+        if config['kind'] == 'Deployment':
+            config['spec']['template']['metadata']['labels'] = argument
+
+
 def set_annotations(argument, config):
     if argument and len(argument) > 0:
         config['metadata']['annotations'] = argument
+
+
+def set_readiness_probe(argument, config):
+    if bool(argument):
+        config['spec']['template']['spec']['containers'][0]['readinessProbe'] = argument
+
+
+def set_liveness_probe(argument, config):
+    if bool(argument):
+        config['spec']['template']['spec']['containers'][0]['livenessProbe'] = argument
+
+
+def set_deployment_args(argument, config):
+    if argument and len(argument) > 0:
+        config['spec']['template']['spec']['containers'][0]['args'] = argument
+
+
+def set_resources(argument, config):
+    if bool(argument):
+        config['spec']['template']['spec']['containers'][0]['resources'] = argument
+
+
+def set_strategy(argument, config):
+    if bool(argument):
+        config['spec']['strategy'] = argument
+
+
+def set_image_pull_policy(argument, config):
+    if argument and argument.strip():
+        config['spec']['template']['spec']['containers'][0]['imagePullPolicy'] = argument
+
+
+def set_restart_policy(argument, config):
+    if argument and argument.strip():
+        config['spec']['template']['spec']['restartPolicy'] = argument
+
+
+def set_affinity(argument, config):
+    if bool(argument):
+        config['spec']['template']['spec']['affinity'] = argument
 
 
 def set_policy_attributes(key, argument, config):
@@ -60,6 +112,14 @@ def set_policy_attributes(key, argument, config):
         'volumes': set_volumes,
         'volume_mounts': set_volume_mounts,
         'annotations': set_annotations,
+        'readiness_probe': set_readiness_probe,
+        'liveness_probe': set_liveness_probe,
+        'deployment_args': set_deployment_args,
+        'labels': set_labels,
+        'namespace': set_namespace,
+        'resources': set_resources,
+        'strategy': set_strategy,
+        'image_pull_policy': set_image_pull_policy,
     }
     func = switcher.get(key)
     func(argument, config)
@@ -83,7 +143,32 @@ class KubePolicyGen:
         envs = input_json.get('environment_variables')
         volume_mounts = input_json.get('volume_mounts')
         volumes = input_json.get('volumes')
-        return version, name, image, image_pull_secret, environment, port, envs, volume_mounts, volumes, replicas
+        args = input_json.get('deployment_args')
+        readiness_probe = input_json.get('readiness_probe')
+        liveness_probe = input_json.get('liveness_probe')
+        namespace = input_json.get('namespace')
+        labels = input_json.get('labels')
+        resources = input_json.get('resources')
+        strategy = input_json.get('strategy')
+        image_pull_policy = input_json.get('image_pull_policy')
+        return version, name, image, image_pull_secret, environment, \
+               port, envs, volume_mounts, volumes, replicas, args, \
+               readiness_probe, liveness_probe, namespace, labels, resources, strategy, image_pull_policy
+
+    @staticmethod
+    def get_multi_container_deployment_yaml_parameters(input_json):
+        version = input_json.get('version', 'apps/v1')
+        metadata = input_json.get('metadata')
+        replicas = input_json.get('replicas', 1)  # set 1 as default value if replicas is not part of the config
+        containers = input_json.get('containers')
+        environment = input_json.get('environment')
+        image_pull_secret = input_json.get('image_pull_secret')
+        volumes = input_json.get('volumes')
+        namespace = input_json.get('namespace')
+        strategy = input_json.get('strategy')
+
+        return version, metadata, replicas, containers, environment, image_pull_secret, \
+               volumes, namespace, strategy
 
     @staticmethod
     def get_ingress_yaml_parameters(input_json):
@@ -109,6 +194,15 @@ class KubePolicyGen:
         return version, name, environment, service_type, port, protocol
 
     @staticmethod
+    def get_secret_yaml_parameters(input_json):
+        version = input_json.get('version', 'v1')
+        metadata = input_json.get('metadata')
+        secret_type = input_json.get('type')
+        data = input_json.get('data')
+
+        return version, metadata, secret_type, data
+
+    @staticmethod
     def build_response(policy_attrs, config):
         for attr in policy_attrs:
             set_policy_attributes(attr.get('key'), attr.get('value'), config)
@@ -118,7 +212,9 @@ class KubePolicyGen:
 
     def populate_deployment_config(self, input_json):
         version, name, image, image_pull_secret, environment, \
-        port, envs, volume_mounts, volumes, replicas = self.get_deployment_yaml_parameters(input_json)
+        port, envs, volume_mounts, volumes, replicas, args, \
+        readiness_probe, liveness_probe, namespace, \
+        labels, resources, strategy, image_pull_policy = self.get_deployment_yaml_parameters(input_json)
 
         error_exist, error = get_properties_state({
             'port': port, 'name': name, 'image': image
@@ -169,6 +265,14 @@ class KubePolicyGen:
             {'key': 'image_pull_secret', 'value': image_pull_secret},
             {'key': 'volume_mounts', 'value': volume_mounts},
             {'key': 'volumes', 'value': volumes},
+            {'key': 'deployment_args', 'value': args},
+            {'key': 'readiness_probe', 'value': readiness_probe},
+            {'key': 'liveness_probe', 'value': liveness_probe},
+            {'key': 'namespace', 'value': namespace},
+            {'key': 'labels', 'value': labels},
+            {'key': 'resources', 'value': resources},
+            {'key': 'strategy', 'value': strategy},
+            {'key': 'image_pull_policy', 'value': image_pull_policy},
         ]
 
         return self.build_response(policy_attrs, config_in)
@@ -256,10 +360,71 @@ class KubePolicyGen:
 
         return self.build_response(policy_attrs, config_in)
 
+    def populate_secret_config(self, input_json):
+        version, metadata, secret_type, data = self.get_secret_yaml_parameters(input_json)
+        error_exist, error = get_properties_state({'type': secret_type, 'data': data, 'metadata': metadata})
+        if error_exist:
+            return {'status': 'error', 'error': error}
+
+        config_in = {
+            'apiVersion': version,
+            'kind': 'Secret',
+            'metadata': metadata,
+            'type': secret_type,
+            'data': data
+        }
+
+        policy_attrs = []
+
+        return self.build_response(policy_attrs, config_in)
+
+    def populate_multi_container_deployment_config(self, input_json):
+        version, metadata, replicas, containers, environment, image_pull_secret, \
+        volumes, namespace, strategy = self.get_multi_container_deployment_yaml_parameters(input_json)
+
+        error_exist, error = get_properties_state({
+            'metadata': metadata, 'containers': containers
+        })
+        if error_exist:
+            return {'status': 'error', 'error': error}
+
+        config_in = {
+            'apiVersion': version,
+            'kind': 'Deployment',
+            'metadata': metadata,
+            'spec': {
+                'replicas': replicas,
+                'template': {
+                    'spec': {
+                        'containers': containers
+                    }
+                }
+            }
+        }
+
+        if 'labels' in metadata:
+            labels = json.loads(json.dumps(metadata.get('labels')))
+            config_in['spec']['template']['metadata'] = {"labels": labels}
+
+        config_in['spec']['selector'] = {'matchLabels': {'app': metadata['name']}}
+
+        policy_attrs = [
+            {'key': 'deploy_environment', 'value': environment},
+            {'key': 'image_pull_secret', 'value': image_pull_secret},
+            {'key': 'volumes', 'value': volumes},
+            {'key': 'namespace', 'value': namespace},
+            {'key': 'strategy', 'value': strategy},
+        ]
+
+        return self.build_response(policy_attrs, config_in)
+
     def populate_config(self):
-        if self.kind == 'deployment':
-            return self.populate_deployment_config(self.input_json)
-        if self.kind == 'ingress':
-            return self.populate_ingress_config(self.input_json)
-        if self.kind == 'svc':
-            return self.populate_service_config(self.input_json)
+        available_config = {
+            'deployment': self.populate_deployment_config,
+            'ingress': self.populate_ingress_config,
+            'svc': self.populate_service_config,
+            'secret': self.populate_secret_config,
+            'multi_container_deployment': self.populate_multi_container_deployment_config,
+        }
+        config_func = available_config.get(self.kind)
+        return config_func(self.input_json)

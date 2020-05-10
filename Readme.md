@@ -10,7 +10,7 @@ It provides way of generating k8s policy files on the fly during CI/CD process.
 :rotating_light:
 ## Features
 
-- Supports creation of deployment, ingress and svc policy file
+- Supports creation of deployment, ingress, svc and secret policy file
 - Pass json string as argument 
 - Dynamically bind environment variables, volumes etc.
 
@@ -54,6 +54,18 @@ kubegen -k svc -d '{"name": "test-app", "host": "test-app.io", "port": 8080, "pa
 // Generate deployment policy file
 
 kubegen -k deployment -d '{"version": "apps/v1", "name": "test-app", "image": "test-app:1.0.0", "port": 8080, "environment": "staging", "image_pull_secret": "test-app-secret", "environment_variables": [{"name": "keyvault_id", "value": "12345"}], "replicas": 3, "volume_mounts": [{"name": "test-volume", "mountPath": "/app/test-volume"}], "volumes": [{"name": "test-volume", "configMap": {"name": "app-configmap"}}]}'
+```
+
+```
+// Generate multi-container deployment policy file
+
+kubegen -k multi_container_deployment -d '{"version": "apps/v1", "metadata": {"name": "test-app", "namespace": "dev", "labels": {"app": "test-app", "company": "kube"}}, "replicas": 2, "containers": [{"name": "webapp", "image": "app/webapp", "ports": [{"containerPort": 8080}], "imagePullPolicy": "always", "env": [{"name": "CLIENT_ID", "value": "123"}, {"name": "HOST_URL", "value": "https://is.url"}, {"name": "DB_PASSWORD", "valueFrom": {"secretKeyRef": {"name": "cloudsql-credentials", "key": "db_pass"}}}]}, {"name": "cloudsql-proxy", "image": "gcr.io/cloudsql-docker/gce-proxy:1.16", "command": ["/cloud_sql_proxy", "-instances=demo-instance=tcp:3306", "-credential_file=/secrets/cloudsql/cred.json"]}]}'
+```
+
+```
+// Generate secret policy file
+
+kubegen -k secret -d '{"version": "v1", "metadata": {"name": "test-app", "namespace": "dev", "resourceVersion": "123", "uid": "eiir-wkie"}, "type": "Opaque", "data": {"username": "YWRtaW4=", "password": "MWYyZDFlMmU2N2Rm"}}'
 ```
 
 [pypi-image]: https://img.shields.io/pypi/v/kubegen.svg
