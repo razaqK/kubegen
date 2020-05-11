@@ -45,6 +45,12 @@ kubegen -k svc -d '{"name": "test-app", "environment": "staging", "port": 8080, 
 ```
 
 ```
+// Generate secret policy file
+
+kubegen -k secret -d '{"version": "v1", "metadata": {"name": "test-app", "namespace": "dev", "resourceVersion": "123", "uid": "eiir-wkie", "labels": {"name": "test-app"}}, "type": "Opaque", "data": {"username": "YWRtaW4=", "password": "MWYyZDFlMmU2N2Rm"}}'
+```
+
+```
 // Generate ingress policy file
 
 kubegen -k svc -d '{"name": "test-app", "host": "test-app.io", "port": 8080, "path": "/",  "tls_secret_name": "test-app-secret", "annotations": {"kubernetes.io/ingress.class": "nginx", "nginx.ingress.kubernetes.io/ssl-redirect": "true"}}'
