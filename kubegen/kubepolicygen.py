@@ -164,11 +164,10 @@ class KubePolicyGen:
         environment = input_json.get('environment')
         image_pull_secret = input_json.get('image_pull_secret')
         volumes = input_json.get('volumes')
-        namespace = input_json.get('namespace')
         strategy = input_json.get('strategy')
 
         return version, metadata, replicas, containers, environment, image_pull_secret, \
-               volumes, namespace, strategy
+               volumes, strategy
 
     @staticmethod
     def get_ingress_yaml_parameters(input_json):
@@ -380,7 +379,7 @@ class KubePolicyGen:
 
     def populate_multi_container_deployment_config(self, input_json):
         version, metadata, replicas, containers, environment, image_pull_secret, \
-        volumes, namespace, strategy = self.get_multi_container_deployment_yaml_parameters(input_json)
+        volumes, strategy = self.get_multi_container_deployment_yaml_parameters(input_json)
 
         error_exist, error = get_properties_state({
             'metadata': metadata, 'containers': containers
@@ -412,7 +411,6 @@ class KubePolicyGen:
             {'key': 'deploy_environment', 'value': environment},
             {'key': 'image_pull_secret', 'value': image_pull_secret},
             {'key': 'volumes', 'value': volumes},
-            {'key': 'namespace', 'value': namespace},
             {'key': 'strategy', 'value': strategy},
         ]
 
