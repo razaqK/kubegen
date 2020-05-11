@@ -59,8 +59,67 @@ kubegen -k deployment -d '{"version": "apps/v1", "name": "test-app", "image": "t
 ```
 // Generate multi-container deployment policy file
 
-kubegen -k multi_container_deployment -d '{"version": "apps/v1", "environment": "dev", "metadata": {"name": "test-app", "namespace": "dev", "labels": {"app": "test-app", "company": "kube"}}, "replicas": 2, "containers": [{"name": "webapp", "image": "app/webapp", "ports": [{"containerPort": 8080}], "imagePullPolicy": "always", "env": [{"name": "CLIENT_ID", "value": "123"}, {"name": "HOST_URL", "value": "https://is.url"}, {"name": "DB_PASSWORD", "valueFrom": {"secretKeyRef": {"name": "cloudsql-credentials", "key": "db_pass"}}}]}, {"name": "cloudsql-proxy", "image": "gcr.io/cloudsql-docker/gce-proxy:1.16", "command": ["/cloud_sql_proxy", "-instances=demo-instance=tcp:3306", "-credential_file=/secrets/cloudsql/cred.json"]}]}'
+kubegen -k multi_container_deployment -d '{"version": "apps/v1", "environment": "dev", "metadata": {"name": "test-app", "namespace": "dev", "labels": {"app": "test-app", "company": "kube"}}, "affinity": {"nodeAffinity": {"requiredDuringSchedulingIgnoredDuringExecution": {"nodeSelectorTerms": [{"matchExpressions": [{"key": "disktype", "operator": "In", "values": ["ssd"]}]}]}}}, "restartPolicy": "Always", "strategy": {"type": "Recreate"}, "replicas": 2, "containers": [{"name": "webapp", "image": "app/webapp", "ports": [{"containerPort": 8080}], "imagePullPolicy": "always", "env": [{"name": "CLIENT_ID", "value": "123"}, {"name": "HOST_URL", "value": "https://is.url"}, {"name": "DB_PASSWORD", "valueFrom": {"secretKeyRef": {"name": "cloudsql-credentials", "key": "db_pass"}}}]}, {"name": "cloudsql-proxy", "image": "gcr.io/cloudsql-docker/gce-proxy:1.16", "command": ["/cloud_sql_proxy", "-instances=demo-instance=tcp:3306", "-credential_file=/secrets/cloudsql/cred.json"]}]}'
+
+another form of usage of affinity:
+"affinity": {"podAntiAffinity": {"requiredDuringSchedulingIgnoredDuringExecution": [{"labelSelector": {"matchExpressions": [{"key": "app", "operator": "In", "values": ["web"]}]}, "topologyKey": "kubernetes.io/hostname"}]}, "podAffinity": {"requiredDuringSchedulingIgnoredDuringExecution": [{"labelSelector": {"matchExpressions": [{"key": "app", "operator": "In", "values": ["redis"]}]}, "topologyKey": "kubernetes.io/hostname"}]}}
 ```
+Sample multi-container yaml output
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-app
+  namespace: dev
+  labels:
+    app: test-app
+    company: kube
+    environment: dev
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+      - name: webapp
+        image: app/webapp
+        ports:
+        - containerPort: 8080
+        imagePullPolicy: always
+        env:
+        - name: CLIENT_ID
+          value: '123'
+        - name: HOST_URL
+          value: https://is.url
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: cloudsql-credentials
+              key: db_pass
+      - name: cloudsql-proxy
+        image: gcr.io/cloudsql-docker/gce-proxy:1.16
+        command:
+        - /cloud_sql_proxy
+        - -instances=demo-instance=tcp:3306
+        - -credential_file=/secrets/cloudsql/cred.json
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: disktype
+                operator: In
+                values:
+                - ssd
+    metadata:
+      labels:
+        app: test-app
+        company: kube
+        environment: dev
+  strategy:
+    type: Recreate
+
+```
+
 
 ```
 // Generate secret policy file
