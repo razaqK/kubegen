@@ -29,7 +29,7 @@ setup(
         'click==7.1.1',
         'colorama==0.4.3',
         'pyfiglet==0.8.post1',
-        'PyYAML==5.3.1',
+        'PyYAML==5.4',
         'six==1.14.0',
         'termcolor==1.1.0'
     ]
